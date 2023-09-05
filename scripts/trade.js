@@ -2,12 +2,20 @@ const hre = require("hardhat");
 const fs = require("fs");
 require("dotenv").config();
 
+const IERC20_SOURCE = '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20';
+
+
 let config,arb,owner,inTrade,balances;
 const network = hre.network.name;
-if (network === 'aurora') config = require('./../config/aurora.json');
-if (network === 'fantom') config = require('./../config/fantom.json');
+console.log(network)
+if (network === 'localhost') config = require('../config/aurora.json');
+if (network === 'fantom') config = require('../config/fantom.json');
 
+console.log(config)
 console.log(`Loaded ${config.routes.length} routes`);
+
+
+
 
 const main = async () => {
   await setup();
@@ -17,8 +25,8 @@ const main = async () => {
   //  await lookForDualTrade();
   //});
   await lookForDualTrade();
-
 }
+
 const searchForRoutes = () => {
   const targetRoute = {};
   targetRoute.router1 = config.routers[Math.floor(Math.random()*config.routers.length)].address;
@@ -41,8 +49,7 @@ const useGoodRoutes = () => {
   return targetRoute;
 }
 
-// const lookForTriDexTrade = async () => {
-const lookForDualTrade = async () => {  
+const lookForDualTrade = async () => {
   let targetRoute;
   if (config.routes.length > 0) {
     targetRoute = useGoodRoutes();
@@ -52,7 +59,6 @@ const lookForDualTrade = async () => {
   try {
     let tradeSize = balances[targetRoute.token1].balance;
     const amtBack = await arb.estimateDualDexTrade(targetRoute.router1, targetRoute.router2, targetRoute.token1, targetRoute.token2, tradeSize);
-    // const amtBack = await arb.estimateTriDexTrade(router1, router2, router3, token1, token2, token3, amount);    
     const multiplier = ethers.BigNumber.from(config.minBasisPointsPerTrade+10000);
     const sizeMultiplied = tradeSize.mul(multiplier);
     const divider = ethers.BigNumber.from(10000);
@@ -98,7 +104,12 @@ const setup = async () => {
   balances = {};
   for (let i = 0; i < config.baseAssets.length; i++) {
     const asset = config.baseAssets[i];
-    const interface = await ethers.getContractFactory('WETH9');
+    const WETH_ADDRESS = "0xC9BdeEd33CD01541e1eeD10f90519d2C06Fe3feB";
+    let interface = await hre.ethers.getContractAt(
+        IERC20_SOURCE,
+        WETH_ADDRESS,
+      );
+    // const interface = await ethers.getContractFactory('WETH9');
     const assetToken = await interface.attach(asset.address);
     const balance = await assetToken.balanceOf(config.arbContract);
     console.log(asset.sym, balance.toString());
@@ -116,7 +127,12 @@ const logResults = async () => {
   console.log(`############# LOGS #############`);
     for (let i = 0; i < config.baseAssets.length; i++) {
     const asset = config.baseAssets[i];
-    const interface = await ethers.getContractFactory('WETH9');
+    // const interface = await ethers.getContractFactory('WETH9');
+    const WETH_ADDRESS = "0xC9BdeEd33CD01541e1eeD10f90519d2C06Fe3feB";
+    let interface = await hre.ethers.getContractAt(
+        IERC20_SOURCE,
+        WETH_ADDRESS,
+      );
     const assetToken = await interface.attach(asset.address);
     balances[asset.address].balance = await assetToken.balanceOf(config.arbContract);
     const diff = balances[asset.address].balance.sub(balances[asset.address].startBalance);
