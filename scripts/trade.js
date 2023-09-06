@@ -1,9 +1,10 @@
 const hre = require("hardhat");
 const fs = require("fs");
 const dotenv = require("dotenv");
+const contractABI = require("./abi.js");
 
 const config = require("./../config/aurora.json");
-const arb = hre.ethers.contract(config.arb);
+const arb = hre.ethers.Contract(config.arb, contractABI , owner);
 const owner = config.owner;
 let inTrade = false;
 
