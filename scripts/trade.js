@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const fs = require("fs");
 require("dotenv").config();
 
-let config, arb, owner, inTrade, balances;
+let config,arb,owner,inTrade,balances;
 const network = hre.network.name;
 if (network === 'aurora') config = require('./../config/aurora.json');
 if (network === 'fantom') config = require('./../config/fantom.json');
@@ -11,9 +11,14 @@ console.log(`Loaded ${config.routes.length} routes`);
 
 const main = async () => {
   await setup();
-  await lookForTriangularTrade();
-}
+  // Scale when using own node
+  //[0,0,0,0,0,0,0,0,0].forEach(async (v,i) => {
+  //  await new Promise(r => setTimeout(r, i*1000));
+  //  await lookForDualTrade();
+  //});
+  await lookForTriDexTrade();
 
+}
 const searchForRoutes = () => {
   const targetRoute = {};
   targetRoute.router1 = config.routers[Math.floor(Math.random()*config.routers.length)].address;
@@ -25,7 +30,23 @@ const searchForRoutes = () => {
   return targetRoute;
 }
 
-const lookForTriangularTrade = async () => {
+let goodCount = 0;
+const useGoodRoutes = () => {
+  const targetRoute = {};
+  const route = config.routes[goodCount];
+  goodCount += 1;
+  if (goodCount >= config.routes.length) goodCount = 0;
+  targetRoute.router1 = route[0];
+  targetRoute.router2 = route[1];
+  targetRoute.router2 = route[2];
+  targetRoute.token1 = route[3];
+  targetRoute.token2 = route[4];
+  targetRoute.token3 = route[5];
+  return targetRoute;
+}
+
+// const lookForTriDexTrade = async () => {
+const lookForTriDexTrade = async () => {  
   let targetRoute;
   if (config.routes.length > 0) {
     targetRoute = useGoodRoutes();
@@ -33,34 +54,43 @@ const lookForTriangularTrade = async () => {
     targetRoute = searchForRoutes();
   }
   try {
-    // Code for estimating trade and checking if profitable
+    let tradeSize = balances[targetRoute.token1].balance;
+    const amtBack = await arb.estimateTriDexTrade(targetRoute.router1, targetRoute.router2,targetRoute.router3, targetRoute.token1, targetRoute.token2, targetRoute.token3, tradeSize);
+    // const amtBack = await arb.estimateTriDexTrade(router1, router2, router3, token1, token2, token3, amount);    
+    const multiplier = ethers.BigNumber.from(config.minBasisPointsPerTrade+10000);
+    const sizeMultiplied = tradeSize.mul(multiplier);
+    const divider = ethers.BigNumber.from(10000);
+    const profitTarget = sizeMultiplied.div(divider);
+    if (!config.routes.length > 0) {
+      fs.appendFile(`./data/${network}RouteLog.txt`, `["${targetRoute.router1}","${targetRoute.router2}","${targetRoute.token1}","${targetRoute.token2}"],`+"\n", function (err) {});
+    }
     if (amtBack.gt(profitTarget)) {
-      await triangularTrade(targetRoute.router1, targetRoute.router2, targetRoute.router3, targetRoute.token1, targetRoute.token2, targetRoute.token3, tradeSize);
+      await dualTrade(targetRoute.router1,targetRoute.router2,targetRoute.router3,targetRoute.token1,targetRoute.token2, targetRoute.token3,tradeSize);
     } else {
-      await lookForTriangularTrade();
+      await lookForTriDexTrade();
     }
   } catch (e) {
     console.log(e);
-    await lookForTriangularTrade();
+    await lookForTriDexTrade();	
   }
 }
 
-const triangularTrade = async (router1, router2, router3, baseToken, token2, token3, amount) => {
+const TriDexTrade = async (router1,router2,baseToken,token2,amount) => {
   if (inTrade === true) {
-    await lookForTriangularTrade();
+    await lookForTriDexTrade();	
     return false;
   }
   try {
     inTrade = true;
-    console.log('> Making triangularTrade...');
-    const tx = await arb.connect(owner).triangularTrade(router1, router2, router3, baseToken, token2, token3, amount); //{ gasPrice: 1000000000003, gasLimit: 500000 }
+    console.log('> Making TriDexTrade...');
+    const tx = await arb.connect(owner).TriDexTrade(router1, router2,router3, token1, token2,token3, amount); //{ gasPrice: 1000000000003, gasLimit: 500000 }
     await tx.wait();
     inTrade = false;
-    await lookForTriangularTrade();
+    await lookForDualTrade();
   } catch (e) {
     console.log(e);
     inTrade = false;
-    await lookForTriangularTrade();
+    await lookForDualTrade();
   }
 }
 
@@ -70,20 +100,31 @@ const setup = async () => {
   const IArb = await ethers.getContractFactory('Arb');
   arb = await IArb.attach(config.arbContract);
   balances = {};
-  // Code for initializing balances
+  for (let i = 0; i < config.baseAssets.length; i++) {
+    const asset = config.baseAssets[i];
+    const interface = await ethers.getContractFactory('WETH9');
+    const assetToken = await interface.attach(asset.address);
+    const balance = await assetToken.balanceOf(config.arbContract);
+    console.log(asset.sym, balance.toString());
+    balances[asset.address] = { sym: asset.sym, balance, startBalance: balance };
+  }
   setTimeout(() => {
     setInterval(() => {
       logResults();
-    }, 600000);
+    }, 600000);~
     logResults();
   }, 120000);
 }
 
 const logResults = async () => {
   console.log(`############# LOGS #############`);
-  for (let i = 0; i < config.baseAssets.length; i++) {
+    for (let i = 0; i < config.baseAssets.length; i++) {
     const asset = config.baseAssets[i];
-    // Code for updating balances and calculating basis points
+    const interface = await ethers.getContractFactory('WETH9');
+    const assetToken = await interface.attach(asset.address);
+    balances[asset.address].balance = await assetToken.balanceOf(config.arbContract);
+    const diff = balances[asset.address].balance.sub(balances[asset.address].startBalance);
+    const basisPoints = diff.mul(10000).div(balances[asset.address].startBalance);
     console.log(`#  ${asset.sym}: ${basisPoints.toString()}bps`);
   }
 }
