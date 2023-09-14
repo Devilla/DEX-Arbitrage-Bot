@@ -7,7 +7,7 @@ const network = hre.network.name;
 if (network === 'aurora') config = require('./../config/aurora.json');
 if (network === 'fantom') config = require('./../config/fantom.json');
 
-console.log(`Loaded ${config.routes.length} routes`);
+console.log(`Loaded ${config.tokens.length} routes`);
 
 const main = async () => {
   await setup();
@@ -16,15 +16,17 @@ const main = async () => {
   //  await new Promise(r => setTimeout(r, i*1000));
   //  await lookForDualTrade();
   //});
-  await lookForDualTrade();
+  await lookForTriDexTrade();
 
 }
 const searchForRoutes = () => {
   const targetRoute = {};
   targetRoute.router1 = config.routers[Math.floor(Math.random()*config.routers.length)].address;
   targetRoute.router2 = config.routers[Math.floor(Math.random()*config.routers.length)].address;
+  targetRoute.router3 = config.routers[Math.floor(Math.random()*config.routers.length)].address;
   targetRoute.token1 = config.baseAssets[Math.floor(Math.random()*config.baseAssets.length)].address;
-  targetRoute.token2 = config.tokens[Math.floor(Math.random()*config.tokens.length)].address;
+  targetRoute.token2 = config.baseAssets[Math.floor(Math.random()*config.baseAssets.length)].address;//config.tokens[Math.floor(Math.random()*config.tokens.length)].address;
+  targetRoute.token3 = config.baseAssets[Math.floor(Math.random()*config.baseAssets.length)].address;//config.tokens[Math.floor(Math.random()*config.tokens.length)].address;
   return targetRoute;
 }
 
@@ -36,22 +38,28 @@ const useGoodRoutes = () => {
   if (goodCount >= config.routes.length) goodCount = 0;
   targetRoute.router1 = route[0];
   targetRoute.router2 = route[1];
-  targetRoute.token1 = route[2];
-  targetRoute.token2 = route[3];
+  targetRoute.router3 = route[2];
+  targetRoute.token1 = route[3];
+  targetRoute.token2 = route[4];
+  targetRoute.token3 = route[5];
+  console.log('************************',route)
+  
+  console.log(targetRoute);
+  
   return targetRoute;
 }
 
 // const lookForTriDexTrade = async () => {
-const lookForDualTrade = async () => {  
+const lookForTriDexTrade = async () => {  
   let targetRoute;
   if (config.routes.length > 0) {
-    targetRoute = useGoodRoutes();
+    targetRoute = searchForRoutes();// useGoodRoutes();
   } else {
     targetRoute = searchForRoutes();
   }
   try {
     let tradeSize = balances[targetRoute.token1].balance;
-    const amtBack = await arb.estimateDualDexTrade(targetRoute.router1, targetRoute.router2, targetRoute.token1, targetRoute.token2, tradeSize);
+    const amtBack = await arb.estimateTriDexTrade(targetRoute.router1, targetRoute.router2,targetRoute.router3, targetRoute.token1, targetRoute.token2, targetRoute.token3, tradeSize);
     // const amtBack = await arb.estimateTriDexTrade(router1, router2, router3, token1, token2, token3, amount);    
     const multiplier = ethers.BigNumber.from(config.minBasisPointsPerTrade+10000);
     const sizeMultiplied = tradeSize.mul(multiplier);
@@ -61,25 +69,25 @@ const lookForDualTrade = async () => {
       fs.appendFile(`./data/${network}RouteLog.txt`, `["${targetRoute.router1}","${targetRoute.router2}","${targetRoute.token1}","${targetRoute.token2}"],`+"\n", function (err) {});
     }
     if (amtBack.gt(profitTarget)) {
-      await dualTrade(targetRoute.router1,targetRoute.router2,targetRoute.token1,targetRoute.token2,tradeSize);
+      await dualTrade(targetRoute.router1,targetRoute.router2,targetRoute.router3,targetRoute.token1,targetRoute.token2, targetRoute.token3,tradeSize);
     } else {
-      await lookForDualTrade();
+      await lookForTriDexTrade();
     }
   } catch (e) {
     console.log(e);
-    await lookForDualTrade();	
+    await lookForTriDexTrade();	
   }
 }
 
-const dualTrade = async (router1,router2,baseToken,token2,amount) => {
+const TriDexTrade = async (router1,router2,baseToken,token2,amount) => {
   if (inTrade === true) {
-    await lookForDualTrade();	
+    await lookForTriDexTrade();	
     return false;
   }
   try {
     inTrade = true;
-    console.log('> Making dualTrade...');
-    const tx = await arb.connect(owner).dualDexTrade(router1, router2, baseToken, token2, amount); //{ gasPrice: 1000000000003, gasLimit: 500000 }
+    console.log('> Making TriDexTrade...');
+    const tx = await arb.connect(owner).TriDexTrade(router1, router2,router3, token1, token2,token3, amount); //{ gasPrice: 1000000000003, gasLimit: 500000 }
     await tx.wait();
     inTrade = false;
     await lookForDualTrade();
@@ -107,7 +115,7 @@ const setup = async () => {
   setTimeout(() => {
     setInterval(() => {
       logResults();
-    }, 600000);
+    }, 600000);~
     logResults();
   }, 120000);
 }
