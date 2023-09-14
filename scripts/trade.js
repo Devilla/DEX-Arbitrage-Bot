@@ -7,7 +7,7 @@ const network = hre.network.name;
 if (network === 'aurora') config = require('./../config/aurora.json');
 if (network === 'fantom') config = require('./../config/fantom.json');
 
-console.log(`Loaded ${config.routes.length} routes`);
+console.log(`Loaded ${config.tokens.length} routes`);
 
 const main = async () => {
   await setup();
@@ -25,8 +25,8 @@ const searchForRoutes = () => {
   targetRoute.router2 = config.routers[Math.floor(Math.random()*config.routers.length)].address;
   targetRoute.router3 = config.routers[Math.floor(Math.random()*config.routers.length)].address;
   targetRoute.token1 = config.baseAssets[Math.floor(Math.random()*config.baseAssets.length)].address;
-  targetRoute.token2 = config.tokens[Math.floor(Math.random()*config.tokens.length)].address;
-  targetRoute.token3 = config.tokens[Math.floor(Math.random()*config.tokens.length)].address;
+  targetRoute.token2 = config.baseAssets[Math.floor(Math.random()*config.baseAssets.length)].address;//config.tokens[Math.floor(Math.random()*config.tokens.length)].address;
+  targetRoute.token3 = config.baseAssets[Math.floor(Math.random()*config.baseAssets.length)].address;//config.tokens[Math.floor(Math.random()*config.tokens.length)].address;
   return targetRoute;
 }
 
@@ -38,10 +38,14 @@ const useGoodRoutes = () => {
   if (goodCount >= config.routes.length) goodCount = 0;
   targetRoute.router1 = route[0];
   targetRoute.router2 = route[1];
-  targetRoute.router2 = route[2];
+  targetRoute.router3 = route[2];
   targetRoute.token1 = route[3];
   targetRoute.token2 = route[4];
   targetRoute.token3 = route[5];
+  console.log('************************',route)
+  
+  console.log(targetRoute);
+  
   return targetRoute;
 }
 
@@ -49,7 +53,7 @@ const useGoodRoutes = () => {
 const lookForTriDexTrade = async () => {  
   let targetRoute;
   if (config.routes.length > 0) {
-    targetRoute = useGoodRoutes();
+    targetRoute = searchForRoutes();// useGoodRoutes();
   } else {
     targetRoute = searchForRoutes();
   }
