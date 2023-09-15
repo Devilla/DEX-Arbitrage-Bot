@@ -3,7 +3,7 @@ function generateCombinations(arr, r) {
 
     function combinationUtil(data, start, index) {
         if (index === r) {
-            console.log(data.join(" "));
+            console.log("'"+data+("', "));
             count++;
             return;
         }
@@ -84,6 +84,6 @@ let count = 0;
 
 // Generate combinations of 3 tokens and 2 routes
 generateCombinations(tokenArr, 3);
-generateCombinations(routerArr, 2);
+// generateCombinations(routerArr, 2);
 
 console.log("Total combinations:", count);
