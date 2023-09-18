@@ -1094,13 +1094,18 @@
     ]
 
 // Incomplete logic for final routes array
-    // for (let i = 0; i < routerPermutations.length; i++) {
-    //     process.std.write("'"+routerPermutations[i]+"', ")
-    //     if(i>0 && i%2==0){
-    //         for (let j = 0; j < tokensPermutations.length; j++) {
-    //             process.std.write("'"+tokensPermutations[j]+"', ")
-                              
-    //         }
-    //     }
+    let routerIndex = 0, tokenIndex=0, n= tokensPermutations.length;
+    while(n--){
+        process.std.write("[");
+        for (let i = routerIndex; i < routerIndex+2 && j< routerPermutations.length; routerIndex++) {
+            process.std.write("'"+routerPermutations[i]+"', ")
+        }
+            
+        for (let j = tokenIndex;j<tokenIndex+2 && j < tokensPermutations.length; tokenIndex++) {
+            process.std.write("'"+tokensPermutations[j]+"', ")
+                            
+        }
+        process.std.write("]");
+    }
 
-    // }
+    
