@@ -111,7 +111,7 @@
     let data = new Array(r1);
     
     // printCombination(routerArr, n1, r1);
-     printCombination(tokenArr, n2, r2);
+    //  printCombination(tokenArr, n2, r2);
 
     let routerPermutations = ['0x2CB45Edb4517d5947aFdE3BEAbF95A582506858B','0xa3a1ef5ae6561572023363862e238afa84c72ef5',
     '0x2CB45Edb4517d5947aFdE3BEAbF95A582506858B', '0xA1B1742e9c32C7cAa9726d8204bD5715e3419861','0xa3a1ef5ae6561572023363862e238afa84c72ef5',
@@ -1095,17 +1095,14 @@
 
 // Incomplete logic for final routes array
     let routerIndex = 0, tokenIndex=0, n= tokensPermutations.length;
-    while(n--){
-        process.std.write("[");
-        for (let i = routerIndex; i < routerIndex+2 && j< routerPermutations.length; routerIndex++) {
-            process.std.write("'"+routerPermutations[i]+"', ")
+    do{
+        
+        for (let i = routerIndex; i < routerIndex+2 && i< routerPermutations.length; routerIndex++) {
+            process.stdout.write("'"+routerPermutations[i]+"', ")
         }
             
         for (let j = tokenIndex;j<tokenIndex+2 && j < tokensPermutations.length; tokenIndex++) {
-            process.std.write("'"+tokensPermutations[j]+"', ")
+            process.stdout.write("'"+tokensPermutations[j]+"', ")
                             
-        }
-        process.std.write("]");
-    }
-
-    
+        }        
+    }while(n--);
